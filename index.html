@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智慧購物清單 Mobile View</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Enable manual dark mode toggle
+            theme: {
+                extend: {
+                    colors: { 'sky-main': '#0ea5e9', 'sky-dark': '#0369a1', 'chat-user': '#dbeafe', 'chat-ai': '#f3f4f6' },
+                    fontFamily: { sans: ['Noto Sans TC', 'sans-serif'] },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Body background for desktop view context */
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        /* Hide scrollbar for internal containers */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .hidden-list { display: none; }
+        .custom-checkbox input:checked + div { background-color: #0ea5e9; border-color: #0ea5e9; }
+        .custom-checkbox input:checked + div svg { display: block; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Chat Styles */
+        .chat-bubble { max-width: 85%; border-radius: 1rem; padding: 0.75rem 1rem; line-height: 1.5; font-size: 0.95rem; }
+        .chat-user { background-color: #dbeafe; color: #1e40af; border-bottom-right-radius: 0.25rem; margin-left: auto; }
+        .dark .chat-user { background-color: #1e3a8a; color: #dbeafe; }
+        .chat-ai { background-color: #ffffff; color: #374151; border-bottom-left-radius: 0.25rem; margin-right: auto; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .dark .chat-ai { background-color: #1f2937; color: #e5e7eb; border: 1px solid #374151; }
+        .prose strong { color: #0ea5e9; } .prose ul { list-style-type: disc; padding-left: 1.2em; }
+        .dark .prose { color: #e5e7eb; }
+    </style>
+</head>
+<!-- Outer body serves as the "Desk" background -->
+<body class="bg-gray-200 dark:bg-gray-950 h-screen flex items-center justify-center overflow-hidden transition-colors duration-300">
+
+    <!-- Phone Frame Container -->
+    <!-- On mobile: w-full h-full. On Desktop: fixed width/height with rounded corners and border -->
+    <div id="app-frame" class="w-full h-full sm:w-[390px] sm:h-[844px] sm:rounded-[3rem] sm:border-[8px] sm:border-gray-800 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-100 flex flex-col overflow-hidden shadow-2xl relative transition-colors duration-300">
+
+        <!-- Header -->
+        <header class="bg-white dark:bg-gray-800 z-20 flex-shrink-0 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
+            <div class="px-4 py-3 flex justify-between items-center">
+                <h1 class="text-lg font-bold text-sky-dark dark:text-sky-400 tracking-wide flex items-center"><i class="fa-solid fa-cart-shopping mr-2"></i>智慧購物</h1>
+                <div class="flex gap-2">
+                    <button onclick="app.openAskModal()" class="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs px-3 py-1.5 rounded-full shadow-md transition-all flex items-center gap-1 animate-pulse-slow"><i class="fa-solid fa-comments"></i> AI 萬事通</button>
+                    <!-- Theme Toggle Button -->
+                    <button onclick="app.toggleTheme()" class="text-gray-400 hover:text-yellow-500 w-8 h-8 flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-sun dark:hidden"></i>
+                        <i class="fa-solid fa-moon hidden dark:block text-sky-300"></i>
+                    </button>
+                    <button onclick="app.openSettingsModal()" class="text-gray-400 hover:text-sky-600 w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-gear"></i></button>
+                </div>
+            </div>
+            <div class="px-4 pb-2 relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm"></i>
+                <input type="text" id="list-filter" placeholder="搜尋..." class="w-full bg-gray-100 dark:bg-gray-700 dark:text-white border-none rounded-xl pl-9 pr-8 py-2 text-sm focus:ring-2 focus:ring-sky-200 dark:focus:ring-sky-800 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" oninput="app.setFilter(this.value)">
+                <button id="clear-search" onclick="app.clearFilter()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 w-6 h-6 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="px-4 pb-0 overflow-x-auto no-scrollbar flex gap-2 border-b border-gray-50 dark:border-gray-700 pt-1" id="category-tabs"></div>
+        </header>
+
+        <!-- Main List -->
+        <main id="list-container" class="flex-1 overflow-y-auto p-4 pb-24 bg-gray-50/50 dark:bg-gray-900">
+            <div id="root-list" class="space-y-3 max-w-2xl mx-auto"></div>
+        </main>
+
+        <!-- Floating Action Buttons (Changed from fixed to absolute to stay inside phone frame) -->
+        <div class="absolute bottom-6 right-6 z-20 flex flex-col gap-3 items-end">
+            <div class="relative group" id="fab-folder">
+                <span class="absolute right-14 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">分類</span>
+                <button onclick="app.openAddModal('folder')" class="bg-white dark:bg-gray-800 text-sky-main dark:text-sky-400 w-12 h-12 rounded-full shadow-lg flex items-center justify-center border border-sky-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"><i class="fa-solid fa-folder-plus text-lg"></i></button>
+            </div>
+            <div class="relative group">
+                <span class="absolute right-14 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">商品</span>
+                <button onclick="app.openAddModal('item')" class="bg-sky-main text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:bg-sky-dark transition-all transform hover:scale-105 active:scale-95"><i class="fa-solid fa-plus text-xl"></i></button>
+            </div>
+        </div>
+
+        <!-- Edit/Add Modal (absolute) -->
+        <div id="modal-overlay" class="absolute inset-0 bg-black/30 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex items-end sm:items-center justify-center">
+            <div id="modal-content" class="bg-white dark:bg-gray-800 w-full rounded-t-2xl sm:rounded-2xl p-6 transform translate-y-full sm:translate-y-0 transition-transform duration-300 shadow-2xl max-h-[90vh] overflow-y-auto relative border dark:border-gray-700 m-0 sm:m-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="modal-title" class="text-lg font-bold text-sky-dark dark:text-sky-400">新增項目</h3>
+                    <button onclick="app.closeModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form id="item-form" onsubmit="event.preventDefault(); app.saveItem();">
+                    <input type="hidden" id="edit-id"><input type="hidden" id="edit-type"><input type="hidden" id="edit-parent-id">
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">名稱 / 關鍵字</label>
+                            <div class="relative">
+                                <input type="text" id="input-title" placeholder="例如：辛拉麵、牛奶" class="w-full bg-sky-50 dark:bg-gray-700 dark:text-white border-none rounded-xl pl-4 pr-16 py-3 focus:ring-2 focus:ring-sky-200 dark:focus:ring-sky-800 outline-none placeholder-gray-400 dark:placeholder-gray-500" required oninput="app.handleInputPreviewLocal(this.value)">
+                                <button type="button" onclick="app.triggerGeminiAnalysis()" id="btn-ai-analyze" class="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-500 hover:text-indigo-700 dark:text-indigo-300 dark:hover:text-indigo-200 bg-white dark:bg-gray-600 shadow-sm border border-indigo-100 dark:border-gray-500 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-transform hover:scale-105 z-10">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI 分析
+                                </button>
+                            </div>
+                            <div class="text-[10px] text-indigo-500 dark:text-indigo-300 mt-2 hidden flex items-center gap-1" id="ai-loading"><i class="fa-solid fa-circle-notch fa-spin"></i> <span>正在搜尋成分表與購買地點...</span></div>
+                        </div>
+                        <div id="item-fields" class="space-y-4 hidden">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">價格</label><input type="number" id="input-price" class="w-full bg-gray-50 dark:bg-gray-700 dark:text-white border-none rounded-xl px-3 py-2 text-sm"></div>
+                                <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">貨幣</label><select id="input-currency" class="w-full bg-gray-50 dark:bg-gray-700 dark:text-white border-none rounded-xl px-3 py-2 text-sm"><option value="TWD">TWD</option><option value="JPY">JPY</option></select></div>
+                            </div>
+                            <div><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">備註 / 評論</label><textarea id="input-notes" rows="2" class="w-full bg-gray-50 dark:bg-gray-700 dark:text-white border-none rounded-xl px-3 py-2 text-sm resize-none"></textarea></div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-1"><i class="fa-solid fa-carrot text-orange-400"></i> 食品成分表</label>
+                                <textarea id="input-ingredients" rows="2" class="w-full bg-orange-50 dark:bg-gray-700 dark:text-white border-none rounded-xl px-3 py-2 text-sm resize-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-700" placeholder="AI 會自動填寫..."></textarea>
+                            </div>
+                            <div id="ai-preview" class="hidden bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                                <div class="text-[10px] font-bold text-indigo-400 mb-1">AI 智慧預覽</div>
+                                <div id="preview-tags" class="flex flex-wrap gap-1 mb-2"></div>
+                                <div id="preview-details" class="text-xs text-gray-600 dark:text-gray-300 space-y-1"></div>
+                                <div id="preview-links" class="text-xs space-y-1 mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex gap-2">
+                        <button type="button" onclick="app.deleteCurrentItem()" id="btn-delete" class="hidden flex-1 py-3 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">刪除</button>
+                        <button type="button" onclick="app.openMoveSelect()" id="btn-move" class="hidden flex-1 py-3 rounded-xl bg-orange-50 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 font-bold hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-100 dark:border-orange-800 flex items-center justify-center gap-1 transition-colors"><i class="fa-solid fa-folder-tree"></i> 移動</button>
+                        <button type="submit" class="flex-[2] py-3 rounded-xl bg-sky-main text-white font-bold shadow-md hover:bg-sky-600 transition-colors">儲存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Move Modal (absolute) -->
+        <div id="move-modal" class="absolute inset-0 bg-black/50 backdrop-blur-md z-[70] hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 w-full rounded-2xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden border dark:border-gray-700 m-4">
+                <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                    <h3 class="font-bold text-gray-800 dark:text-gray-100"><i class="fa-solid fa-folder-tree mr-2 text-sky-500"></i>選擇移動位置</h3>
+                    <button onclick="app.closeMoveModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <div class="p-3 overflow-y-auto flex-1 bg-white dark:bg-gray-900" id="move-list-container"></div>
+            </div>
+        </div>
+
+        <!-- Settings Modal (absolute) -->
+        <div id="settings-modal" class="absolute inset-0 bg-black/30 backdrop-blur-sm z-[80] hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 w-full rounded-2xl p-6 shadow-2xl flex flex-col gap-4 border dark:border-gray-700 m-4">
+                <div class="flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800 dark:text-white">API Key</h3><button onclick="app.closeSettingsModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">請輸入 Google API Key 以使用 AI 功能</p>
+                <input type="password" id="api-key-input" placeholder="Google Gemini API Key" class="w-full bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+                <div class="flex gap-2"><button onclick="app.saveApiKey()" class="flex-1 bg-sky-500 text-white font-bold py-2 rounded-xl">儲存</button><button onclick="app.resetData(true)" class="px-4 py-2 rounded-xl text-red-400 border border-transparent hover:border-red-100 dark:hover:border-red-900 font-bold">重置</button></div>
+            </div>
+        </div>
+
+        <!-- Chat Modal (absolute) -->
+        <div id="ask-modal" class="absolute inset-0 bg-white dark:bg-gray-900 z-[60] hidden transition-transform duration-300 translate-y-full flex flex-col">
+            <div class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-4 py-3 flex justify-between items-center shadow-sm z-10">
+                <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white"><i class="fa-solid fa-robot"></i></div><div><h3 class="font-bold text-gray-800 dark:text-white">AI 萬事通</h3></div></div>
+                <div class="flex gap-2"><button id="btn-clear-chat" onclick="app.clearChat()" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 rounded-full"><i class="fa-solid fa-trash-can"></i></button><button onclick="app.closeAskModal()" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"><i class="fa-solid fa-chevron-down"></i></button></div>
+            </div>
+            <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900"><div id="chat-intro" class="chat-bubble chat-ai"><p>你好！我是你的 AI 購物助手 ✨</p></div></div>
+            <div class="p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex gap-2 items-end"><textarea id="ask-input" rows="1" class="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white border-none rounded-2xl px-4 py-3 resize-none outline-none placeholder-gray-400 dark:placeholder-gray-500" placeholder="問問我..."></textarea><button onclick="app.sendAsk()" id="ask-send-btn" class="w-11 h-11 rounded-full bg-violet-600 text-white flex items-center justify-center shadow-md"><i class="fa-solid fa-paper-plane"></i></button></div>
+        </div>
+
+    </div><!-- End of Phone Frame -->
+
+    <script>
+        const envApiKey = ""; 
+        const Utils = {
+            generateId: () => Date.now().toString(36) + Math.random().toString(36).substr(2),
+            getApiKey() { return localStorage.getItem('user_gemini_api_key') || envApiKey; },
+            async callGeminiWithSearch(prompt) {
+                const key = this.getApiKey(); if (!key) { app.openSettingsModal(); return null; }
+                try { 
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`, { 
+                        method: 'POST', headers: {'Content-Type':'application/json'}, 
+                        body: JSON.stringify({contents:[{parts:[{text:prompt}]}], tools:[{google_search:{}}]})
+                    });
+                    const data = await response.json();
+                    if(data.error) throw new Error(data.error.message);
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text; 
+                } catch(e) { alert("AI 連線錯誤: "+e.message); return null; }
+            },
+            
+            analyzeInputLocal: (text, ingredients = "") => {
+                const i = { tags: [], links: [], isFood: false }; 
+                const fullText = (text + " " + ingredients).toLowerCase();
+                if (fullText.match(/辣|spicy|麻辣|pepper|chili|curry/)) i.tags.push({icon:'fa-pepper-hot',color:'text-red-500',label:'辛辣'});
+                if (fullText.match(/奶|乳|milk|latte|cheese|butter|cream/)) i.tags.push({icon:'fa-cow',color:'text-blue-500',label:'乳製品'});
+                if (fullText.match(/蝦|蟹|魚|海鮮|shrimp|crab|fish|seafood/)) i.tags.push({icon:'fa-shrimp',color:'text-orange-500',label:'海鮮'});
+                if (fullText.match(/堅果|花生|nut|peanut|almond/)) i.tags.push({icon:'fa-jar-wheat',color:'text-yellow-600',label:'堅果'});
+                if (fullText.match(/蛋|egg/)) i.tags.push({icon:'fa-egg',color:'text-yellow-400',label:'蛋'});
+                if (fullText.match(/酒|beer|wine|alcohol/)) i.tags.push({icon:'fa-wine-glass',color:'text-purple-500',label:'酒精'});
+                i.links.push({site:'Google Maps',url:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(text)}`,icon:'fa-map-location-dot',label:'地圖'});
+                return i;
+            },
+            
+            analyzeInputWithGemini: async (text) => {
+                const prompt = `分析「${text}」。請使用 Google Search。
+                請回傳 JSON 格式 (不要 Markdown): {
+                    "type": "product" 或 "place",
+                    "tags": [{"label":"", "color":"", "icon":""}],
+                    "prices": {"TW":"台幣價格(純數字)", "JP":"日幣價格(純數字)"},
+                    "ingredients": "成分摘要",
+                    "reviewSummary": "評價摘要",
+                    "locationName": "若為商品，提供一個可購買的店家名；若為地點，提供地點名"
+                }`;
+                const r = await Utils.callGeminiWithSearch(prompt);
+                if(!r) return null;
+                try { 
+                    const s = r.indexOf('{'); const e = r.lastIndexOf('}') + 1;
+                    if(s > -1 && e > -1) return JSON.parse(r.substring(s, e));
+                    return JSON.parse(r); 
+                } catch(e) { 
+                    alert("AI 回傳格式無法解析，原始回應:\n" + r.substring(0, 100) + "...");
+                    return null; 
+                }
+            }
+        };
+
+        const App = {
+            data: [], activeTab: 'all', filterText: '', chatHistory: [],
+            init() {
+                const s = localStorage.getItem('shoppingListApp_v14_fix');
+                if (s) this.data = JSON.parse(s); else this.resetData(false);
+                const k = localStorage.getItem('user_gemini_api_key'); if(k) document.getElementById('api-key-input').value = k;
+                
+                // Theme Init
+                if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                
+                this.render();
+            },
+            save() { localStorage.setItem('shoppingListApp_v14_fix', JSON.stringify(this.data)); this.render(); },
+            resetData(shouldSave) {
+                if (shouldSave && !confirm("重置？")) return;
+                this.data = [{ id: Utils.generateId(), type: 'folder', title: '🇯🇵 日本清單', isExpanded: true, children: [] }];
+                this.activeTab = 'all'; if (shouldSave) this.save(); else this.render(); this.closeSettingsModal();
+            },
+
+            // --- Theme Toggle ---
+            toggleTheme() {
+                const html = document.documentElement;
+                if (html.classList.contains('dark')) {
+                    html.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    html.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            },
+
+            // --- Move Logic ---
+            openMoveSelect() {
+                const id = document.getElementById('edit-id').value;
+                const container = document.getElementById('move-list-container');
+                let html = `<div onclick="app.executeMove('${id}', null)" class="p-3 border border-gray-100 dark:border-gray-700 rounded-xl mb-2 flex items-center gap-3 bg-white dark:bg-gray-800 cursor-pointer hover:bg-sky-50 dark:hover:bg-gray-700 shadow-sm"><div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-300"><i class="fa-solid fa-house"></i></div><span class="font-bold text-gray-700 dark:text-gray-200">最上層 (根目錄)</span></div>`;
+                const renderFolders = (nodes, level) => {
+                    nodes.forEach(n => {
+                        if (n.type === 'folder' && n.id !== id) {
+                            const isChild = this.isDescendant(id, n.id);
+                            html += `<div ${isChild?'':'onclick="app.executeMove(\''+id+'\', \''+n.id+'\')"' } class="p-3 border border-gray-100 dark:border-gray-700 rounded-xl mb-2 flex items-center gap-3 transition-colors ${isChild?'opacity-40 cursor-not-allowed bg-gray-50 dark:bg-gray-800':'cursor-pointer hover:bg-sky-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800'} shadow-sm" style="margin-left: ${level*16}px"><div class="w-8 h-8 rounded-full bg-sky-50 dark:bg-gray-700 flex items-center justify-center text-sky-500 dark:text-sky-400"><i class="fa-solid fa-folder"></i></div><span class="font-bold text-gray-700 dark:text-gray-200 truncate">${n.title}</span>${isChild?'<span class="text-[10px] text-red-400 ml-auto">不可</span>':''}</div>`;
+                            if (n.children) renderFolders(n.children, level + 1);
+                        }
+                    });
+                };
+                renderFolders(this.data, 0);
+                container.innerHTML = html;
+                const modal = document.getElementById('move-modal'); modal.classList.remove('hidden'); setTimeout(()=>modal.classList.remove('opacity-0'), 10);
+            },
+            closeMoveModal() { const m=document.getElementById('move-modal'); m.classList.add('opacity-0'); setTimeout(()=>m.classList.add('hidden'),300); },
+            executeMove(tid, did) {
+                const pr = this.findParent(this.data, tid); if(!pr) return;
+                const item = pr.list.splice(pr.list.findIndex(x=>x.id===tid), 1)[0];
+                if(did===null) this.data.push(item);
+                else { const d=this.findNode(this.data, did); if(d){ d.children.push(item); d.isExpanded=true; } else this.data.push(item); }
+                this.save(); this.closeMoveModal(); this.closeModal();
+            },
+            isDescendant(pid, cid) { const p=this.findNode(this.data, pid); if(!p||!p.children)return false; const c=ns=>{for(let n of ns){if(n.id===cid)return true;if(n.children&&c(n.children))return true;}return false;}; return c(p.children); },
+
+            // --- CRUD ---
+            setActiveTab(id) { this.activeTab = id; this.render(); },
+            setFilter(t) { this.filterText = t.trim(); document.getElementById('clear-search').classList.toggle('hidden', !this.filterText); this.render(); },
+            clearFilter() { document.getElementById('list-filter').value=''; this.setFilter(''); },
+            
+            createItem(t, o={}) { const l=Utils.analyzeInputLocal(t, o.ingredients||""); return {id:Utils.generateId(), type:'item', title:t, isCompleted:false, price:o.price||'', currency:o.currency||'TWD', notes:o.notes||'', ingredients:o.ingredients||'', aiData:o.aiData||{tags:l.tags,links:l.links}, ...o}; },
+            createFolder(t) { return {id:Utils.generateId(), type:'folder', title:t, isExpanded:true, children:[]}; },
+            findNode(nodes, id) { for(let n of nodes){if(n.id===id)return n; if(n.children){const f=this.findNode(n.children,id);if(f)return f;}} return null; },
+            findParent(nodes, id, p=null) { for(let n of nodes){if(n.id===id)return{list:nodes,parent:p}; if(n.children){const f=this.findParent(n.children,id,n);if(f)return f;}} return null; },
+
+            openAddModal(type, pid=null) {
+                if(!pid && type==='item' && this.activeTab!=='all') pid = this.activeTab;
+                this.currentEditId = null; 
+                document.getElementById('edit-id').value=''; document.getElementById('edit-type').value=type; document.getElementById('edit-parent-id').value=pid||'';
+                document.getElementById('input-title').value=''; document.getElementById('input-price').value=''; document.getElementById('input-notes').value=''; document.getElementById('input-ingredients').value='';
+                document.getElementById('modal-title').innerText = type==='folder'?(pid?'新增子分類':'新增分類'):'新增商品';
+                document.getElementById('btn-delete').classList.add('hidden'); document.getElementById('btn-move').classList.add('hidden'); 
+                document.getElementById('item-fields').classList.toggle('hidden', type!=='item');
+                if(type === 'item') document.getElementById('btn-ai-analyze').classList.remove('hidden'); else document.getElementById('btn-ai-analyze').classList.add('hidden');
+                document.getElementById('ai-preview').classList.add('hidden');
+                this.showModal();
+            },
+            openEditModal(id) {
+                const n = this.findNode(this.data, id); if(!n) return;
+                this.currentEditId = id; document.getElementById('edit-id').value=id; document.getElementById('edit-type').value=n.type;
+                document.getElementById('input-title').value=n.title;
+                document.getElementById('modal-title').innerText = n.type==='folder'?'編輯分類':'編輯商品';
+                document.getElementById('btn-delete').classList.remove('hidden'); document.getElementById('btn-move').classList.remove('hidden'); 
+                if(n.type==='item') {
+                    document.getElementById('item-fields').classList.remove('hidden'); document.getElementById('btn-ai-analyze').classList.remove('hidden');
+                    document.getElementById('input-price').value=n.price; document.getElementById('input-currency').value=n.currency; document.getElementById('input-notes').value=n.notes;
+                    document.getElementById('input-ingredients').value=n.ingredients || '';
+                    const safeAiData = { tags: n.aiData?.tags || [], links: n.aiData?.links || [] };
+                    this.updatePreviewUI(safeAiData, null);
+                } else { document.getElementById('item-fields').classList.add('hidden'); document.getElementById('btn-ai-analyze').classList.add('hidden'); }
+                this.showModal();
+            },
+            showModal(){const m=document.getElementById('modal-overlay'),c=document.getElementById('modal-content'); m.classList.remove('hidden'); void m.offsetWidth; m.classList.remove('opacity-0'); c.classList.remove('translate-y-full');},
+            closeModal(){const m=document.getElementById('modal-overlay'),c=document.getElementById('modal-content'); m.classList.add('opacity-0'); c.classList.add('translate-y-full'); setTimeout(()=>m.classList.add('hidden'),300);},
+            saveItem(){
+                const id=document.getElementById('edit-id').value, type=document.getElementById('edit-type').value, pid=document.getElementById('edit-parent-id').value, title=document.getElementById('input-title').value;
+                if(!title.trim()) return;
+                const ing = document.getElementById('input-ingredients').value;
+                const l = Utils.analyzeInputLocal(title, ing); // Analyze considering ingredients
+                let ad = {tags:l.tags,links:l.links};
+                if(this.lastAiResult && this.lastAiResult.tags) { this.lastAiResult.tags.forEach(t=>{if(!ad.tags.find(x=>x.label===t.label))ad.tags.push(t)}); }
+                // Use last AI result location if available
+                if(this.lastAiResult && this.lastAiResult.locationName) {
+                     ad.links = [{site:'Google Maps', url:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(this.lastAiResult.locationName)}`, icon:'fa-map-location-dot', label:this.lastAiResult.locationName}];
+                } else {
+                     ad.links = [{site:'Google Maps', url:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(title)}`, icon:'fa-map-location-dot', label:'搜尋地點'}];
+                }
+                this.lastAiResult=null; // Clear
+                
+                if(id){
+                    const n=this.findNode(this.data, id); 
+                    if(n){ 
+                        n.title=title; 
+                        if(type==='item'){ 
+                            n.price=document.getElementById('input-price').value; n.currency=document.getElementById('input-currency').value; n.notes=document.getElementById('input-notes').value; n.ingredients=ing;
+                            n.aiData=ad; 
+                        } 
+                    }
+                } else {
+                    let list=this.data;
+                    if(!pid && type==='folder') list=this.data;
+                    else if(pid) { const p=this.findNode(this.data,pid); if(p){ list=p.children; p.isExpanded=true; } }
+                    else if(this.activeTab!=='all' && type==='item') { const p=this.findNode(this.data,this.activeTab); if(p) list=p.children; }
+                    list.push(type==='folder'?this.createFolder(title):this.createItem(title,{price:document.getElementById('input-price').value,currency:document.getElementById('input-currency').value,notes:document.getElementById('input-notes').value,ingredients:ing,aiData:ad}));
+                }
+                this.save(); this.closeModal();
+            },
+            deleteCurrentItem(){ if(confirm("刪除？")){const id=document.getElementById('edit-id').value, r=this.findParent(this.data, id); if(r){r.list.splice(r.list.findIndex(n=>n.id===id),1); this.save(); this.closeModal();}}}, 
+            toggleExpand(id){const n=this.findNode(this.data, id); if(n){n.isExpanded=!n.isExpanded; this.save();}},
+            toggleComplete(id){const n=this.findNode(this.data, id); if(n){n.isCompleted=!n.isCompleted; this.save();}},
+
+            // UI
+            handleInputPreviewLocal(t){ 
+                if(!t || document.getElementById('edit-type').value !== 'item'){ document.getElementById('ai-preview').classList.add('hidden'); return; } 
+                const ing = document.getElementById('input-ingredients').value;
+                this.updatePreviewUI(Utils.analyzeInputLocal(t, ing)); 
+            },
+            updatePreviewUI(a, f=null){
+                const c=document.getElementById('ai-preview'), t=document.getElementById('preview-tags'), l=document.getElementById('preview-links'), d=document.getElementById('preview-details');
+                const tags=a?.tags||[], links=a?.links||[];
+                if(tags.length===0 && links.length===0 && !f) { c.classList.add('hidden'); return; }
+                c.classList.remove('hidden'); 
+                t.innerHTML=tags.map(x=>`<span class="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-full border border-gray-100 dark:border-gray-600 shadow-sm flex items-center gap-1 ${x.color} dark:text-gray-200"><i class="fa-solid ${x.icon}"></i> ${x.label}</span>`).join('');
+                if(f) { d.innerHTML=(f.reviewSummary?`⭐ ${f.reviewSummary}<br>`:''); } else d.innerHTML='';
+                l.innerHTML=links.map(x=>`<a href="${x.url}" target="_blank" class="block w-full text-center bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg text-xs hover:bg-gray-50 dark:hover:bg-gray-600"><i class="fa-solid ${x.icon}"></i> ${x.label||'搜尋'}</a>`).join('');
+            },
+            async triggerGeminiAnalysis(){
+                if(!Utils.getApiKey()){this.openSettingsModal();return;} 
+                const t=document.getElementById('input-title').value; if(!t) {alert("請輸入名稱"); return;}
+                const btn = document.getElementById('btn-ai-analyze'), loading = document.getElementById('ai-loading');
+                loading.classList.remove('hidden'); btn.disabled = true;
+                
+                const r=await Utils.analyzeInputWithGemini(t); 
+                loading.classList.add('hidden'); btn.disabled = false;
+
+                if(r){ 
+                    const p = r.prices?.TW || r.prices?.TWD || r.prices?.NT || r.prices?.JP;
+                    if(p) document.getElementById('input-price').value = String(p).replace(/[^0-9.]/g, ''); 
+                    if(r.ingredients) document.getElementById('input-ingredients').value = r.ingredients;
+                    if(r.reviewSummary) document.getElementById('input-notes').value = r.reviewSummary;
+
+                    const l=Utils.analyzeInputLocal(t, r.ingredients || ""); 
+                    if(r.tags) r.tags.forEach(x=>l.tags.push(x)); 
+                    if(r.locationName) l.links = [{site:'Google Maps', url:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.locationName)}`, icon:'fa-map-location-dot', label:r.locationName}];
+
+                    this.updatePreviewUI(l,r); this.lastAiResult=r; 
+                } 
+            },
+            
+            // Modal Helpers
+            openSettingsModal(){document.getElementById('settings-modal').classList.remove('hidden');setTimeout(()=>document.getElementById('settings-modal').classList.remove('opacity-0'),10);},
+            closeSettingsModal(){document.getElementById('settings-modal').classList.add('opacity-0');setTimeout(()=>document.getElementById('settings-modal').classList.add('hidden'),300);},
+            saveApiKey(){const k=document.getElementById('api-key-input').value.trim(); if(k)localStorage.setItem('user_gemini_api_key',k); else localStorage.removeItem('user_gemini_api_key'); this.closeSettingsModal();},
+            openAskModal(){if(!Utils.getApiKey()){this.openSettingsModal();return;}const m=document.getElementById('ask-modal');m.classList.remove('hidden');void m.offsetWidth;m.classList.remove('translate-y-full');},
+            closeAskModal(){const m=document.getElementById('ask-modal');m.classList.add('translate-y-full');setTimeout(()=>m.classList.add('hidden'),300);},
+            clearChat(){
+                const b=document.getElementById('btn-clear-chat'); 
+                if(b.classList.contains('text-red-500')){ this.chatHistory=[]; document.getElementById('chat-container').innerHTML='<div class="chat-bubble chat-ai">已清除。</div>'; b.classList.remove('text-red-500'); }
+                else { b.classList.add('text-red-500'); setTimeout(()=>b.classList.remove('text-red-500'),2000); }
+            },
+            async sendAsk(){
+                const i=document.getElementById('ask-input'),b=document.getElementById('ask-send-btn'),c=document.getElementById('chat-container'),t=i.value.trim(); if(!t)return;
+                i.value=''; i.style.height='auto'; c.innerHTML+=`<div class="chat-bubble chat-user">${t}</div>`; b.disabled=true; b.classList.add('opacity-50'); c.scrollTop=c.scrollHeight;
+                const h=this.chatHistory.map(x=>`${x.r}:${x.c}`).join('\n'); this.chatHistory.push({r:'user',c:t});
+                const r=await Utils.callGeminiWithSearch(`歷史:${h}\n用戶:${t}\n請用繁體中文Markdown回答購物相關問題。`);
+                c.innerHTML+=`<div class="chat-bubble chat-ai">${marked.parse(r||"Error")}</div>`; this.chatHistory.push({r:'ai',c:r}); b.disabled=false; b.classList.remove('opacity-50'); c.scrollTop=c.scrollHeight;
+            },
+
+            // Render
+            render() {
+                const c = document.getElementById('root-list'); const tabs = document.getElementById('category-tabs');
+                tabs.innerHTML = `<button onclick="app.setActiveTab('all')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border ${this.activeTab==='all'?'bg-sky-500 text-white border-sky-500':'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-300 border-gray-200 dark:border-gray-600'}">全部</button>` + 
+                    this.data.filter(n=>n.type==='folder').map(n=>`<button onclick="app.setActiveTab('${n.id}')" class="whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold border flex items-center gap-2 ${this.activeTab===n.id?'bg-sky-500 text-white border-sky-500':'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-300 border-gray-200 dark:border-gray-600'}">${n.title} <span class="text-[10px] bg-black/10 dark:bg-white/10 px-1.5 rounded-full">${n.children.length}</span></button>`).join('');
+                c.innerHTML='';
+                if(this.filterText) {
+                    const all=[]; const f=(ns)=>{ns.forEach(n=>{if(n.type==='item'&&(n.title.includes(this.filterText)||n.notes?.includes(this.filterText)))all.push(n); if(n.children)f(n.children);})}; f(this.data);
+                    if(all.length===0) c.innerHTML=`<div class="text-center py-10 text-gray-400">無結果</div>`;
+                    else {c.innerHTML=`<div class="text-xs text-gray-400 mb-2">搜尋結果</div>`; all.forEach(n=>this.renderItem(n,c));}
+                    document.getElementById('fab-folder').classList.add('hidden'); return;
+                }
+                document.getElementById('fab-folder').classList.remove('hidden');
+                let list = this.activeTab==='all' ? this.data : (this.data.find(n=>n.id===this.activeTab)?.children || []);
+                if(list.length===0) c.innerHTML=`<div class="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">空空如也</div>`;
+                else this.renderRecursive(list, c, this.activeTab==='all'?0:1);
+            },
+            renderRecursive(nodes, c, level) {
+                nodes.forEach(n => {
+                    if(n.type==='folder') {
+                        const div=document.createElement('div');
+                        const isMain = this.activeTab==='all' && level===0;
+                        div.className = isMain ? `mb-6 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden` : `mb-2`;
+                        div.innerHTML = `<div class="${isMain?'bg-gray-50 dark:bg-gray-700 p-4 border-b border-gray-100 dark:border-gray-600':'bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-xl'} flex justify-between items-center cursor-pointer" onclick="app.toggleExpand('${n.id}')"><div class="font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 flex-1">${isMain?`<i class="fa-solid ${n.isExpanded?'fa-folder-open':'fa-folder'} text-sky-400"></i>`:`<i class="fa-solid ${n.isExpanded?'fa-chevron-down':'fa-chevron-right'} text-xs"></i>`} ${n.title} <span class="text-[10px] bg-gray-100 dark:bg-gray-600 px-2 rounded-full text-gray-400 dark:text-gray-300">${n.children.length}</span></div><div class="flex gap-2" onclick="event.stopPropagation()"><button onclick="app.openEditModal('${n.id}')" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-sky-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600"><i class="fa-solid fa-pen text-sm"></i></button><button onclick="app.openAddModal('item','${n.id}')" class="w-8 h-8 flex items-center justify-center text-sky-500 bg-sky-50 dark:bg-gray-700 rounded-full"><i class="fa-solid fa-plus"></i></button>${isMain?`<button onclick="app.openAddModal('folder','${n.id}')" class="text-xs bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 px-2 rounded-full">+子分類</button>`:``}</div></div><div class="${isMain?'p-3':'pl-3 ml-3 border-l-2 border-gray-100 dark:border-gray-700 mt-2'} ${n.isExpanded?'':'hidden-list'}" id="ch-${n.id}"></div>`;
+                        c.appendChild(div);
+                        this.renderRecursive(n.children, div.querySelector(`#ch-${n.id}`), level+1);
+                    } else this.renderItem(n, c);
+                });
+            },
+            renderItem(n, c) {
+                const el=document.createElement('div'); el.className=`bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 ${n.isCompleted?'border-l-gray-300 dark:border-l-gray-600 opacity-60 bg-gray-50 dark:bg-gray-900':'border-l-sky-400'} mb-2 flex flex-col gap-2`;
+                el.innerHTML=`<div class="flex gap-3 items-center"><label class="custom-checkbox relative flex items-center"><input type="checkbox" class="sr-only" ${n.isCompleted?'checked':''} onchange="app.toggleComplete('${n.id}')"><div class="w-5 h-5 border-2 border-gray-300 dark:border-gray-600 rounded-md flex items-center justify-center"><svg class="w-3 h-3 text-white hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div></label><div class="flex-1 cursor-pointer min-w-0" onclick="app.openEditModal('${n.id}')"><div class="flex justify-between items-center gap-2"><span class="font-medium text-gray-800 dark:text-gray-200 truncate ${n.isCompleted?'line-through':''}">${n.title}</span><div class="flex gap-1 flex-shrink-0"> ${(n.aiData?.tags||[]).map(t=>`<span class="text-[10px] ${t.color}"><i class="fa-solid ${t.icon}"></i></span>`).join('')} </div></div><div class="flex gap-2 mt-1 text-xs items-center">${n.price?`<span class="font-bold text-sky-600 dark:text-sky-400">${n.currency} ${n.price}</span>`:''} ${(n.aiData?.links||[]).map(l=>`<a href="${l.url}" target="_blank" onclick="event.stopPropagation()" class="text-gray-400 dark:text-gray-500 hover:text-sky-500 flex items-center gap-1"><i class="fa-solid ${l.icon}"></i></a>`).join('')}</div></div></div>`;
+                c.appendChild(el);
+            }
+        };
+        window.onload = () => { app = App; app.init(); };
+    </script>
+</body>
+</html>
