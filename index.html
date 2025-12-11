@@ -11,7 +11,7 @@
     
     <script>
         tailwind.config = {
-            darkMode: 'class', // Enable manual dark mode toggle
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: { 'sky-main': '#0ea5e9', 'sky-dark': '#0369a1', 'chat-user': '#dbeafe', 'chat-ai': '#f3f4f6' },
@@ -22,17 +22,12 @@
         }
     </script>
     <style>
-        /* Body background for desktop view context */
         body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
-        
-        /* Hide scrollbar for internal containers */
         ::-webkit-scrollbar { width: 0px; background: transparent; }
         .hidden-list { display: none; }
         .custom-checkbox input:checked + div { background-color: #0ea5e9; border-color: #0ea5e9; }
         .custom-checkbox input:checked + div svg { display: block; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* Chat Styles */
         .chat-bubble { max-width: 85%; border-radius: 1rem; padding: 0.75rem 1rem; line-height: 1.5; font-size: 0.95rem; }
         .chat-user { background-color: #dbeafe; color: #1e40af; border-bottom-right-radius: 0.25rem; margin-left: auto; }
         .dark .chat-user { background-color: #1e3a8a; color: #dbeafe; }
@@ -42,12 +37,11 @@
         .dark .prose { color: #e5e7eb; }
     </style>
 </head>
-<!-- Outer body serves as the "Desk" background -->
 <body class="bg-gray-200 dark:bg-gray-950 h-screen flex items-center justify-center overflow-hidden transition-colors duration-300">
 
     <!-- Phone Frame Container -->
-    <!-- Height reduced from 844px to 700px as requested -->
-    <div id="app-frame" class="w-full h-full sm:w-[390px] sm:h-[700px] sm:rounded-[3rem] sm:border-[8px] sm:border-gray-800 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-100 flex flex-col overflow-hidden shadow-2xl relative transition-colors duration-300">
+    <!-- Height further reduced to 600px for a compact view -->
+    <div id="app-frame" class="w-full h-full sm:w-[375px] sm:h-[600px] sm:rounded-[2.5rem] sm:border-[8px] sm:border-gray-800 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-100 flex flex-col overflow-hidden shadow-2xl relative transition-colors duration-300">
 
         <!-- Header -->
         <header class="bg-white dark:bg-gray-800 z-20 flex-shrink-0 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
@@ -55,7 +49,6 @@
                 <h1 class="text-lg font-bold text-sky-dark dark:text-sky-400 tracking-wide flex items-center"><i class="fa-solid fa-cart-shopping mr-2"></i>智慧購物</h1>
                 <div class="flex gap-2">
                     <button onclick="app.openAskModal()" class="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs px-3 py-1.5 rounded-full shadow-md transition-all flex items-center gap-1 animate-pulse-slow"><i class="fa-solid fa-comments"></i> AI 萬事通</button>
-                    <!-- Theme Toggle Button -->
                     <button onclick="app.toggleTheme()" class="text-gray-400 hover:text-yellow-500 w-8 h-8 flex items-center justify-center transition-colors">
                         <i class="fa-solid fa-sun dark:hidden"></i>
                         <i class="fa-solid fa-moon hidden dark:block text-sky-300"></i>
@@ -63,7 +56,6 @@
                     <button onclick="app.openSettingsModal()" class="text-gray-400 hover:text-sky-600 w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-gear"></i></button>
                 </div>
             </div>
-            <!-- Search Bar Fixed: Added inner relative wrapper to fix icon positioning -->
             <div class="px-4 pb-2">
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm pointer-events-none"></i>
@@ -79,7 +71,7 @@
             <div id="root-list" class="space-y-3 max-w-2xl mx-auto"></div>
         </main>
 
-        <!-- Floating Action Buttons (Changed from fixed to absolute to stay inside phone frame) -->
+        <!-- Floating Action Buttons -->
         <div class="absolute bottom-6 right-6 z-20 flex flex-col gap-3 items-end">
             <div class="relative group" id="fab-folder">
                 <span class="absolute right-14 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">分類</span>
@@ -91,7 +83,7 @@
             </div>
         </div>
 
-        <!-- Edit/Add Modal (absolute) -->
+        <!-- Edit/Add Modal -->
         <div id="modal-overlay" class="absolute inset-0 bg-black/30 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300 flex items-end sm:items-center justify-center">
             <div id="modal-content" class="bg-white dark:bg-gray-800 w-full rounded-t-2xl sm:rounded-2xl p-6 transform translate-y-full sm:translate-y-0 transition-transform duration-300 shadow-2xl max-h-[90vh] overflow-y-auto relative border dark:border-gray-700 m-0 sm:m-4">
                 <div class="flex justify-between items-center mb-4">
@@ -138,7 +130,7 @@
             </div>
         </div>
 
-        <!-- Move Modal (absolute) -->
+        <!-- Move Modal -->
         <div id="move-modal" class="absolute inset-0 bg-black/50 backdrop-blur-md z-[70] hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-gray-800 w-full rounded-2xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden border dark:border-gray-700 m-4">
                 <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
@@ -149,7 +141,7 @@
             </div>
         </div>
 
-        <!-- Settings Modal (absolute) -->
+        <!-- Settings Modal -->
         <div id="settings-modal" class="absolute inset-0 bg-black/30 backdrop-blur-sm z-[80] hidden opacity-0 transition-opacity duration-300 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-gray-800 w-full rounded-2xl p-6 shadow-2xl flex flex-col gap-4 border dark:border-gray-700 m-4">
                 <div class="flex justify-between items-center"><h3 class="text-lg font-bold text-gray-800 dark:text-white">API Key</h3><button onclick="app.closeSettingsModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i class="fa-solid fa-xmark text-xl"></i></button></div>
@@ -159,7 +151,7 @@
             </div>
         </div>
 
-        <!-- Chat Modal (absolute) -->
+        <!-- Chat Modal -->
         <div id="ask-modal" class="absolute inset-0 bg-white dark:bg-gray-900 z-[60] hidden transition-transform duration-300 translate-y-full flex flex-col">
             <div class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-4 py-3 flex justify-between items-center shadow-sm z-10">
                 <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white"><i class="fa-solid fa-robot"></i></div><div><h3 class="font-bold text-gray-800 dark:text-white">AI 萬事通</h3></div></div>
@@ -169,7 +161,7 @@
             <div class="p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex gap-2 items-end"><textarea id="ask-input" rows="1" class="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-white border-none rounded-2xl px-4 py-3 resize-none outline-none placeholder-gray-400 dark:placeholder-gray-500" placeholder="問問我..."></textarea><button onclick="app.sendAsk()" id="ask-send-btn" class="w-11 h-11 rounded-full bg-violet-600 text-white flex items-center justify-center shadow-md"><i class="fa-solid fa-paper-plane"></i></button></div>
         </div>
 
-    </div><!-- End of Phone Frame -->
+    </div>
 
     <script>
         const envApiKey = ""; 
@@ -228,7 +220,7 @@
         const App = {
             data: [], activeTab: 'all', filterText: '', chatHistory: [],
             init() {
-                const s = localStorage.getItem('shoppingListApp_v14_fix');
+                const s = localStorage.getItem('shoppingListApp_v15_compact');
                 if (s) this.data = JSON.parse(s); else this.resetData(false);
                 const k = localStorage.getItem('user_gemini_api_key'); if(k) document.getElementById('api-key-input').value = k;
                 
@@ -241,7 +233,7 @@
                 
                 this.render();
             },
-            save() { localStorage.setItem('shoppingListApp_v14_fix', JSON.stringify(this.data)); this.render(); },
+            save() { localStorage.setItem('shoppingListApp_v15_compact', JSON.stringify(this.data)); this.render(); },
             resetData(shouldSave) {
                 if (shouldSave && !confirm("重置？")) return;
                 this.data = [{ id: Utils.generateId(), type: 'folder', title: '🇯🇵 日本清單', isExpanded: true, children: [] }];
