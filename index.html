@@ -46,8 +46,8 @@
 <body class="bg-gray-200 dark:bg-gray-950 h-screen flex items-center justify-center overflow-hidden transition-colors duration-300">
 
     <!-- Phone Frame Container -->
-    <!-- On mobile: w-full h-full. On Desktop: fixed width/height with rounded corners and border -->
-    <div id="app-frame" class="w-full h-full sm:w-[390px] sm:h-[844px] sm:rounded-[3rem] sm:border-[8px] sm:border-gray-800 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-100 flex flex-col overflow-hidden shadow-2xl relative transition-colors duration-300">
+    <!-- Height reduced from 844px to 700px as requested -->
+    <div id="app-frame" class="w-full h-full sm:w-[390px] sm:h-[700px] sm:rounded-[3rem] sm:border-[8px] sm:border-gray-800 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-100 flex flex-col overflow-hidden shadow-2xl relative transition-colors duration-300">
 
         <!-- Header -->
         <header class="bg-white dark:bg-gray-800 z-20 flex-shrink-0 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
@@ -63,10 +63,13 @@
                     <button onclick="app.openSettingsModal()" class="text-gray-400 hover:text-sky-600 w-8 h-8 flex items-center justify-center"><i class="fa-solid fa-gear"></i></button>
                 </div>
             </div>
-            <div class="px-4 pb-2 relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm"></i>
-                <input type="text" id="list-filter" placeholder="搜尋..." class="w-full bg-gray-100 dark:bg-gray-700 dark:text-white border-none rounded-xl pl-9 pr-8 py-2 text-sm focus:ring-2 focus:ring-sky-200 dark:focus:ring-sky-800 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" oninput="app.setFilter(this.value)">
-                <button id="clear-search" onclick="app.clearFilter()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 w-6 h-6 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            <!-- Search Bar Fixed: Added inner relative wrapper to fix icon positioning -->
+            <div class="px-4 pb-2">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm pointer-events-none"></i>
+                    <input type="text" id="list-filter" placeholder="搜尋..." class="w-full bg-gray-100 dark:bg-gray-700 dark:text-white border-none rounded-xl pl-9 pr-8 py-2 text-sm focus:ring-2 focus:ring-sky-200 dark:focus:ring-sky-800 outline-none transition-all placeholder-gray-400 dark:placeholder-gray-500" oninput="app.setFilter(this.value)">
+                    <button id="clear-search" onclick="app.clearFilter()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 w-6 h-6 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+                </div>
             </div>
             <div class="px-4 pb-0 overflow-x-auto no-scrollbar flex gap-2 border-b border-gray-50 dark:border-gray-700 pt-1" id="category-tabs"></div>
         </header>
